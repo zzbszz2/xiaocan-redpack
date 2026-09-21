@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#3370ff"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>小蚕 · 入群红包</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+         background: #f5f6f8; margin: 0; padding: 0; color: #1f2329; min-height: 100vh; }
+
+  .header { background: linear-gradient(135deg, #3370ff 0%, #5b8aff 100%);
+            color: #fff; padding: 28px 24px 20px; text-align: center; }
+  .header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.85; line-height: 1.5; }
+
+  .card { margin: 16px; background: #fff; border-radius: 16px; padding: 20px;
+          box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: #4e5969; margin-bottom: 6px; font-weight: 500; }
+  .field input { width: 100%; padding: 13px 14px; font-size: 16px; border: 1.5px solid #e5e6eb;
+                 border-radius: 10px; outline: none; transition: border-color .2s; background: #fafafa; }
+  .field input:focus { border-color: #3370ff; background: #fff; }
+  .field .hint { font-size: 11px; color: #8a8f99; margin-top: 4px; }
+
+  .cred-section { background: #f0f2f8; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .cred-section h3 { margin: 0 0 10px; font-size: 13px; color: #3370ff; font-weight: 600; }
+  .cred-section .field { margin-bottom: 10px; }
+  .cred-section .field:last-child { margin-bottom: 0; }
+
+  .btn { display: block; width: 100%; padding: 15px; font-size: 17px; font-weight: 700; color: #fff;
+         background: linear-gradient(135deg, #3370ff, #5b8aff); border: none; border-radius: 12px;
+         cursor: pointer; transition: transform .1s, opacity .2s; }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn.reset { background: #f2f3f5; color: #4e5969; font-size: 15px; font-weight: 500; margin-top: 10px; }
+
+  .status { margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 14px;
+            min-height: 44px; display: flex; align-items: center; gap: 8px; }
+  .status.ok { background: #e8f5ef; color: #00a870; border: 1px solid #c3e8d4; }
+  .status.err { background: #fef0f0; color: #f53f3f; border: 1px solid #fad4d4; }
+  .status.loading { background: #f0f5ff; color: #3370ff; border: 1px solid #c5d4ff; }
+
+  pre { margin-top: 12px; background: #0f1419; color: #c9d1d9; padding: 14px; border-radius: 10px;
+        font-size: 11px; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow: auto; }
+
+  .log-section { margin-top: 16px; }
+  .log-section h4 { font-size: 12px; color: #8a8f99; margin: 0 0 8px; font-weight: 500; }
+  .log-row { display: flex; justify-content: space-between; font-size: 11px; color: #8a8f99;
+             padding: 4px 0; border-bottom: 1px solid #f2f3f5; }
+  .log-row span:last-child { font-family: monospace; color: #1f2329; }
+
+  .version { text-align: center; font-size: 11px; color: #c0c4cc; margin: 20px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎁 小蚕红包领取</h1>
+  <p>每次点击重新签名<br/>不依赖抓包，有效期更长</p>
+</div>
+
+<div class="card">
+  <div class="field">
+    <label>silk_id（群组/红包目标）</label>
+    <input id="silkId" type="number" inputmode="numeric" placeholder="输入群组ID，如 2473202" value="2473202"/>
+  </div>
+  <div class="field">
+    <label>scene（场景值）</label>
+    <input id="scene" type="number" inputmode="numeric" value="3" min="1"/>
+    <div class="hint">通常 3 = 入群红包，其他值看接口文档</div>
+  </div>
+
+  <div class="cred-section">
+    <h3>🔐 凭证配置</h3>
+    <div class="field">
+      <label>x-Sivir（TOKEN / JWT）</label>
+      <input id="tokenInput" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+             style="font-family:monospace;font-size:13px;"/>
+    </div>
+    <div class="field">
+      <label>x-Vayne（USER_ID）</label>
+      <input id="tokenUserId" type="text" inputmode="numeric" placeholder="23619057"/>
+    </div>
+  </div>
+
+  <button class="btn" id="claimBtn" onclick="doClaim()">🎁 领取红包</button>
+  <button class="btn reset" onclick="resetForm()">🔄 重置表单</button>
+
+  <div class="status" id="status" style="display:none;"></div>
+  <pre id="result" style="display:none;"></pre>
+
+  <div class="log-section" id="logSection" style="display:none;">
+    <h4>📋 本次签名日志</h4>
+    <div id="signLog"></div>
+  </div>
+</div>
+
+<div class="version">v1.0.0 · 仅供学习研究</div>
+
+<script>
+/* ============================================================
+   MD5 实现（与原前端 signer.py 一致）
+   ============================================================ */
+function md5(str) {
+  function safeAdd(x, y) {
+    const lsw = (x & 0xffff) + (y & 0xffff);
+    const msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+    return (msw << 16) | (lsw & 0xffff);
+  }
+  function bitRotateLeft(num, cnt) { return (num << cnt) | (num >>> (32 - cnt)); }
+  function md5cmn(q, a, b, x, s, t) {
+    return safeAdd(bitRotateLeft(safeAdd(safeAdd(a, q), safeAdd(x, t)), s), b);
+  }
+  function md5ff(a, b, c, d, x, s, t) { return md5cmn((b & c) | ((~b) & d), a, b, x, s, t); }
+  function md5gg(a, b, c, d, x, s, t) { return md5cmn((b & d) | (c & (~d)), a, b, x, s, t); }
+  function md5hh(a, b, c, d, x, s, t) { return md5cmn(b ^ c ^ d, a, b, x, s, t); }
+  function md5ii(a, b, c, d, x, s, t) { return md5cmn(c ^ (b | (~d)), a, b, x, s, t); }
+  function md5blks(s) {
+    const nblk = ((s.length + 8) >> 6) + 1;
+    const blks = new Array(nblk * 16);
+    blks.fill(0);
+    for (let i = 0; i < s.length; i++) {
+      blks[i >> 2] |= s.charCodeAt(i) << ((i % 4) * 8);
+    }
+    blks[s.length >> 2] |= 0x80 << ((s.length % 4) * 8);
+    blks[nblk * 16 - 2] = s.length * 8;
+    return blks;
+  }
+  const x = md5blks(unescape(encodeURIComponent(str)));
+  let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+  for (let i = 0; i < x.length; i += 16) {
+    const olda = a, oldb = b, oldc = c, oldd = d;
+    a = md5ff(a,b,c,d, x[i], 7, -680876936);    d = md5ff(d,a,b,c, x[i+1],12,-389564586);
+    c = md5ff(c,d,a,b, x[i+2],17,606105819);    b = md5ff(b,c,d,a, x[i+3],22,-1044525330);
+    a = md5ff(a,b,c,d, x[i+4], 7,-176418897);   d = md5ff(d,a,b,c, x[i+5],12,1200080426);
+    c = md5ff(c,d,a,b, x[i+6],17,-1473231341);  b = md5ff(b,c,d,a, x[i+7],22,-45705983);
+    a = md5ff(a,b,c,d, x[i+8], 7,1770035416);   d = md5ff(d,a,b,c, x[i+9],12,-1958414417);
+    c = md5ff(c,d,a,b,x[i+10],17,-42063);       b = md5ff(b,c,d,a,x[i+11],22,-1990404162);
+    a = md5ff(a,b,c,d,x[i+12], 7,1804603682);   d = md5ff(d,a,b,c,x[i+13],12,-40341101);
+    c = md5ff(c,d,a,b,x[i+14],17,-1502002290);  b = md5ff(b,c,d,a,x[i+ 1],20,1236535329);
+    a = md5gg(a,b,c,d, x[i+ 1], 5,-165796510);  d = md5gg(d,a,b,c, x[i+ 6], 9,-1069501632);
+    c = md5gg(c,d,a,b, x[i+11],14, 643717713);  b = md5gg(b,c,d,a, x[i],   20,-373897302);
+    a = md5gg(a,b,c,d, x[i+ 5], 5,-701558691);  d = md5gg(d,a,b,c,x[i+10], 9,  38016083);
+    c = md5gg(c,d,a,b,x[i+15],14,-660478335);   b = md5gg(b,c,d,a, x[i+ 4],20,-405537848);
+    a = md5gg(a,b,c,d, x[i+ 9], 5, 568446438);  d = md5gg(d,a,b,c,x[i+14], 9,-1019803690);
+    c = md5gg(c,d,a,b, x[i+ 3],14,-187363961);  b = md5gg(b,c,d,a, x[i+ 8],20,1163531501);
+    a = md5gg(a,b,c,d,x[i+13], 5,-1444681467);  d = md5gg(d,a,b,c, x[i+ 2], 9,  -51403784);
+    c = md5gg(c,d,a,b, x[i+ 7],14,1735328473);  b = md5gg(b,c,d,a,x[i+12],20,-1926607734);
+    a = md5hh(a,b,c,d, x[i+ 5], 4, -378558);    d = md5hh(d,a,b,c, x[i+ 8],11,-2022574463);
+    c = md5hh(c,d,a,b,x[i+11],16,1839030562);   b = md5hh(b,c,d,a,x[i+14],23, -35309556);
+    a = md5hh(a,b,c,d, x[i+ 1], 4,-1530992060); d = md5hh(d,a,b,c, x[i+ 4],11,1272893353);
+    c = md5hh(c,d,a,b, x[i+ 7],16, -155497632); b = md5hh(b,c,d,a,x[i+10],23,-1094730640);
+    a = md5hh(a,b,c,d,x[i+13], 4, 681279174);   d = md5hh(d,a,b,c, x[i],   11, -358537222);
+    c = md5hh(c,d,a,b, x[i+ 3],16, -722521979); b = md5hh(b,c,d,a, x[i+ 6],23,  76029189);
+    a = md5hh(a,b,c,d, x[i+ 9], 4,-640364487);  d = md5hh(d,a,b,c,x[i+12],11, -421815835);
+    c = md5hh(c,d,a,b,x[i+15],16, 530742520);   b = md5hh(b,c,d,a, x[i+ 2],23, -995338651);
+    a = md5ii(a,b,c,d, x[i],    6,-198630844);  d = md5ii(d,a,b,c, x[i+ 7],10,1126891415);
+    c = md5ii(c,d,a,b,x[i+14],15,-1416354905);  b = md5ii(b,c,d,a, x[i+ 5],21,  -57434055);
+    a = md5ii(a,b,c,d,x[i+12], 6,1700485571);   d = md5ii(d,a,b,c, x[i+ 3],10,-1894986606);
+    c = md5ii(c,d,a,b,x[i+10],15,    -1051523); b = md5ii(b,c,d,a, x[i+ 1],21,-2054922799);
+    a = md5ii(a,b,c,d, x[i+ 8], 6,1873313359);  d = md5ii(d,a,b,c,x[i+15],10,  -30611744);
+    c = md5ii(c,d,a,b, x[i+ 6],15,-1560198380); b = md5ii(b,c,d,a,x[i+13],21,1309151649);
+    a = md5ii(a,b,c,d, x[i+ 4], 6, -145523070); d = md5ii(d,a,b,c,x[i+11],10,-1120210379);
+    c = md5ii(c,d,a,b, x[i+ 2],15, 718787259);  b = md5ii(b,c,d,a, x[i+ 9],21, -343485551);
+    a = safeAdd(a, olda); b = safeAdd(b, oldb); c = safeAdd(c, oldc); d = safeAdd(d, oldd);
+  }
+  const hex = v => {
+    const h = "0123456789abcdef";
+    let s = '';
+    for (let i = 0; i < 4; i++) {
+      s += h[(v >> (i*8+4)) & 15] + h[(v >> (i*8)) & 15];
+    }
+    return s;
+  };
+  return hex(a) + hex(b) + hex(c) + hex(d);
+}
+
+/* ============================================================
+   签名算法（与 signer.py / 原前端完全一致）
+   ============================================================ */
+const SERVER = "SilkwormExplore";
+const METHOD = "ExploreMobile.GetGroupJoinRedPack";
+const GW_URL = "https://gw.xiaocantech.com/rpc";
+const VERSION = "3.19.2.43";
+const CITY = "430104";
+const APP_ID = "38";
+
+function randomNami() {
+  const hex = "0123456789abcdef";
+  let s = "";
+  for (let i = 0; i < 16; i++) s += hex[Math.floor(Math.random() * 16)];
+  return s;
+}
+
+function buildAshe(timeMs, serverName, methodName, nami) {
+  const inner = md5((serverName + "." + methodName).toLowerCase());
+  return md5(inner + timeMs + nami);
+}
+
+/* ============================================================
+   持久化凭证（localStorage）
+   ============================================================ */
+function saveCreds(token, userId) {
+  if (token) localStorage.setItem("xc_token", token);
+  if (userId) localStorage.setItem("xc_user_id", userId);
+}
+
+function loadCreds() {
+  return {
+    token: localStorage.getItem("xc_token") || "",
+    userId: localStorage.getItem("xc_user_id") || "",
+  };
+}
+
+/* ============================================================
+   UI 初始化
+   ============================================================ */
+const saved = loadCreds();
+document.getElementById("tokenInput").value = saved.token;
+document.getElementById("tokenUserId").value = saved.userId;
+
+let currentLog = {};
+
+function showStatus(msg, type) {
+  const el = document.getElementById("status");
+  el.style.display = "flex";
+  el.className = "status " + type;
+  el.textContent = msg;
+}
+
+function showResult(text) {
+  const el = document.getElementById("result");
+  el.style.display = "block";
+  el.textContent = text;
+}
+
+function showLog() {
+  const el = document.getElementById("signLog");
+  el.innerHTML = "";
+  for (const [k, v] of Object.entries(currentLog)) {
+    el.innerHTML += `<div class="log-row"><span>${k}</span><span>${v}</span></div>`;
+  }
+  document.getElementById("logSection").style.display = "block";
+}
+
+/* ============================================================
+   核心请求
+   ============================================================ */
+async function doClaim() {
+  const btn = document.getElementById("claimBtn");
+  const silkId = document.getElementById("silkId").value.trim();
+  const scene = document.getElementById("scene").value.trim() || "3";
+  const token = document.getElementById("tokenInput").value.trim();
+  const userId = document.getElementById("tokenUserId").value.trim();
+
+  if (!silkId) { showStatus("⚠️ 请先填写 silk_id", "err"); return; }
+  if (!token)  { showStatus("⚠️ 请先填写 x-Sivir (TOKEN)", "err"); return; }
+  if (!userId) { showStatus("⚠️ 请先填写 x-Vayne (USER_ID)", "err"); return; }
+
+  // 保存凭证
+  saveCreds(token, userId);
+
+  btn.disabled = true;
+  showStatus("⏳ 签名生成中…", "loading");
+  document.getElementById("result").style.display = "none";
+  document.getElementById("logSection").style.display = "none";
+
+  const timeMs = Date.now();
+  const nami = randomNami();
+  const ashe = buildAshe(timeMs, SERVER, METHOD, nami);
+
+  currentLog = {
+    "X-Garen (时间戳)": timeMs,
+    "X-Nami (随机)": nami,
+    "X-Ashe (签名)": ashe,
+    "servername": SERVER,
+    "methodname": METHOD,
+    "silk_id": silkId,
+    "scene": scene,
+  };
+
+  const headers = {
+    "appid": APP_ID,
+    "content-type": "application/json",
+    "x-Vayne": userId,
+    "version": VERSION,
+    "X-Garen": String(timeMs),
+    "X-Version": VERSION,
+    "x-Teemo": silkId,
+    "userid": userId,
+    "X-Model": "iPhone 13<iPhone14,5> iPhone",
+    "servername": SERVER,
+    "X-Platform": "mini",
+    "x-City": CITY,
+    "X-Ashe": ashe,
+    "x-Sivir": token,
+    "env": "",
+    "x-Annie": "XC",
+    "methodname": METHOD,
+    "X-Nami": nami,
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.78(0x18004e2c) NetType/WIFI Language/zh_CN",
+    "Referer": "https://servicewechat.com/wxa7121dc957650271/123/page-frame.html",
+  };
+
+  const body = { silk_id: Number(silkId), scene: Number(scene), app_id: Number(APP_ID) };
+
+  console.log("[小蚕] headers:", headers);
+  console.log("[小蚕] body:", body);
+
+  showStatus("🚀 正在发送请求…", "loading");
+
+  try {
+    // 在 Capacitor APP 内使用 Capacitor HTTP 插件（无 CORS）
+    // 在浏览器内使用普通 fetch
+    let resp, text;
+
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Http) {
+      // Capacitor 环境：使用原生 HTTP 插件，无 CORS 限制
+      const result = await window.Capacitor.Plugins.Http.request({
+        method: "POST",
+        url: GW_URL,
+        headers: headers,
+        data: body,
+        connectTimeout: 15000,
+        readTimeout: 15000,
+      });
+      text = result.data;
+      const fakeStatus = result.status || 200;
+      resp = { ok: result.status >= 200 && result.status < 300, status: fakeStatus };
+    } else {
+      // 浏览器环境（开发测试用）
+      resp = await fetch(GW_URL, { method: "POST", headers, body });
+      text = await resp.text();
+    }
+
+    showLog();
+
+    if (resp.ok) {
+      showStatus("✅ HTTP " + resp.status + " 请求成功", "ok");
+      try {
+        const json = JSON.parse(text);
+        if (json.code === 0) {
+          showStatus("🎉 领取成功！code=0", "ok");
+        } else {
+          showStatus("⚠️ 业务返回 code=" + json.code + "：" + (json.message || "未知"), "err");
+        }
+        showResult(JSON.stringify(json, null, 2));
+      } catch {
+        showResult(text);
+      }
+    } else {
+      showStatus("❌ HTTP " + resp.status + " 失败", "err");
+      showResult(text);
+    }
+  } catch(e) {
+    showStatus("❌ 请求失败: " + e.message, "err");
+    showResult(e.stack || e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function resetForm() {
+  document.getElementById("silkId").value = "2473202";
+  document.getElementById("scene").value = "3";
+  document.getElementById("status").style.display = "none";
+  document.getElementById("result").style.display = "none";
+  document.getElementById("logSection").style.display = "none";
+}
+</script>
+</body>
+</html>

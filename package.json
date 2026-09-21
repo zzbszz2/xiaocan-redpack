@@ -1,0 +1,20 @@
+{
+  "name": "xiaocan-redpack",
+  "version": "1.0.0",
+  "description": "小蚕入群红包领取工具",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "npx cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
