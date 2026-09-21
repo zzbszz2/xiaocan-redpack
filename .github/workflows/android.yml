@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
+      - run: npm install
       - run: npm run build
       - uses: actions/setup-java@v4
         with:
@@ -25,4 +25,3 @@ jobs:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
