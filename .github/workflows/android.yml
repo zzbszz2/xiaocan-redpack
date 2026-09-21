@@ -17,6 +17,8 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: cap init
+        run: npx cap init "XiaocanRedpack" "com.xiaocan.redpack" --web-dir=dist
       - run: npx cap add android
       - run: npx cap sync android
       - run: cd android && ./gradlew assembleDebug
